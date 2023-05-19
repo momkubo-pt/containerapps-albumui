@@ -2,6 +2,10 @@ name: Trigger auto deployment
 on:
   # 手動実行用トリガー
   workflow_dispatch:      
+# Add env
+env:
+   CONTAINER_REGISTRY: handson01cicdj73lpxf2urxhm.azurecr.io
+  
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -19,6 +23,15 @@ jobs:
       - name: Confirm if env have REPOSITORY_NAME
         run: |
           echo ${{ env.REPOSITORY_NAME }}
+          
+      # Add a step
+      - name: Log in to container registry
+        # 認証処理を行うためのアクション
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.CONTAINER_REGISTRY }}
+          username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
 
       # Add a step
       - name: Build and push container image to registry
@@ -28,3 +41,17 @@ jobs:
           tags: ${{ env.CONTAINER_REGISTRY }}/${{ env.REPOSITORY_NAME }}:${{ github.sha }}
           file: ./Dockerfile
           context: ./
+
+  # Add a job and steps
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: build
+  
+    steps:
+      - name: Set repository name to env
+        run: | 
+          echo "REPOSITORY_NAME=${GITHUB_REPOSITORY#${GITHUB_REPOSITORY_OWNER}/}" >> $GITHUB_ENV
+
+      - name: Confirm if env have REPOSITORY_NAME
+        run: |
+          echo ${{ env.REPOSITORY_NAME }}
